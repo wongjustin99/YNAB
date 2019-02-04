@@ -1,7 +1,7 @@
 function App(settings){
   var self = this;
   var client = self.client = new Client(settings);
-  var rootFile = ".ynabSettings.yroot";
+  var rootFile = "/.ynabSettings.yroot";
   var appSettings = { client: client, app: self };
   self.numberFormat = '0,0.00';
   self.errorMessage = ko.observable();
@@ -32,16 +32,26 @@ function App(settings){
     return accountBalance()[accountId] || 0;
   }
 
-  client.authenticate().then(function(){
+  // client.authenticate().then(function(){
+  /*
     client.loadJson(rootFile).then(function(root){
-      self.budget.budgets(root.relativeKnownBudgets);
-      if(self.budget.budgets().length === 1){
-        self.budget.select(self.budget.budgets()[0])
-      }
     }).fail(function(){
       self.errorMessage("Unable to load YNAB settings file (" + rootFile + "). Make sure you connect to a Dropbox account with that YNAB syncs with.");
     });
+    */
+  client.loadJson(rootFile).then(function(root){
+    console.log("loaded root file");
+    self.budget.budgets(root.relativeKnownBudgets);
+    if(self.budget.budgets().length === 1){
+      self.budget.select(self.budget.budgets()[0])
+    } else {
+      console.log("multibudget");
+    }
+  }).fail(function(){
+    console.log("error loading rootfile");
+    self.errorMessage("Unable to load YNAB settings file (" + rootFile + "). Make sure you connect to a Dropbox account with that YNAB syncs with.");
   });
+  // });
 }
 
 function AccountList(settings) {
@@ -316,7 +326,7 @@ function BudgetController(settings){
 
                 app.payee.payees(budget.payees)
                 app.category.categories(categories);
-                
+
                 app.account.accounts(budget.accounts.sort(function(a, b) {
                   return a.sortableIndex - b.sortableIndex;
                 }))

@@ -37,17 +37,10 @@
           </div>
           <div data-bind="template: { name: 'account-list-template', data: account.budgetAccounts }"></div>
           <div data-bind="template: { name: 'account-list-template', data: account.offBudgetAccounts }"></div>
-          
-          <div class="text-muted text-center">
+
+          <div class="text-muted text-center" style="display:none !important;">
             <a href="http://ihaochi.com">haochi</a> made this &middot;
             find it on <a href="https://github.com/haochi/YNAB">github</a> <br />
-            <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top" class="form-line">
-              <input type="hidden" name="cmd" value="_s-xclick">
-              <input type="hidden" name="hosted_button_id" value="PEWUM7ZRKQ45W">
-              <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online!">
-              <img alt="" border="0" src="https://www.paypalobjects.com/en_US/i/scr/pixel.gif" width="1" height="1">
-            </form>
-            disclaimer: YNAB is a trademark of Steine LLC and this project has no affiliation to YNAB or Steine LLC <br/>
           </div>
         </div>
 
@@ -117,6 +110,20 @@
         </div>
       </div>
     </div>
+
+    <div class="container main">
+      <div id="pre-auth-section" style="display:none;">
+        <p>This example takes the user through Dropbox's API OAuth flow using <code>Dropbox.getAuthenticationUrl()</code> method [<a href="http://dropbox.github.io/dropbox-sdk-js/Dropbox.html#getAuthenticationUrl">docs</a>] and then uses the generated access token to list the contents of their root directory.</p>
+        <a href="" id="authlink" class="button">Authenticate</a>
+        <p class="info">Once authenticated, it will use the access token to list the files in your root directory.</p>
+      </div>
+
+      <div id="authed-section" style="display:none;">
+        <p>You have successfully authenticated. Below are the contents of your root directory. They were fetched using the SDK and access token.</p>
+        <ul id="files"></ul>
+      </div>
+    </div>
+
     <script type="text/html" id="account-list-template">
       <div class="panel panel-default">
         <div class="panel-heading toggle-account-list" data-bind="click: toggle">
@@ -135,20 +142,68 @@
         </div>
       </div>
     </script>
-    <script src="https://www.dropbox.com/static/api/dropbox-datastores-1.0-latest.js"></script>
+    <script src="https://unpkg.com/dropbox@4.0.15/dist/Dropbox-sdk.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/knockout/3.0.0/knockout-debug.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.5.2/underscore-min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/async/0.9.0/async.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/numeral.js/1.5.3/numeral.min.js"></script>
+    <script src="/utils.js"></script>
     <script src="client.js"></script>
     <script src="app.js"></script>
     <script>
-    var app;
-    if(securedPage) {
-      app = new App({ key: "qrrtbcmepbyplpp"});
-      ko.applyBindings(app);      
-    }
+      var app;
+      function getAccessTokenFromUrl() {
+        return utils.parseQueryString(window.location.hash).access_token;
+      }
+      // If the user was just redirected from authenticating, the urls hash will
+      // contain the access token.
+      function isAuthenticated() {
+        return !!getAccessTokenFromUrl();
+      }
+      // Render a list of items to #files
+      function renderItems(items) {
+        var filesContainer = document.getElementById('files');
+        items.forEach(function(item) {
+          var li = document.createElement('li');
+          li.innerHTML = item.name;
+          filesContainer.appendChild(li);
+        });
+      }
+      // This example keeps both the authenticate and non-authenticated setions
+      // in the DOM and uses this function to show/hide the correct section.
+      function showPageSection(elementId) {
+        document.getElementById(elementId).style.display = 'block';
+      }
+      if (isAuthenticated()) {
+        showPageSection('authed-section');
+        // Create an instance of Dropbox with the access token and use it to
+        // fetch and render the files in the users root directory.
+        var dbx = new Dropbox.Dropbox({ accessToken: getAccessTokenFromUrl() });
+        /*
+        dbx.filesListFolder({path: ''})
+          .then(function(response) {
+            renderItems(response.entries);
+          })
+          .catch(function(error) {
+            console.error(error);
+          });
+        */
+        if(securedPage) {
+          app = new App({ clientId: "e4vn78hc3ocn6yd", accessToken: getAccessTokenFromUrl() });
+          ko.applyBindings(app);      
+        }
+      } else {
+        showPageSection('pre-auth-section');
+        // Set the login anchors href using dbx.getAuthenticationUrl()
+        if(securedPage) {
+          // app = new App({ clientId: "e4vn78hc3ocn6yd"});
+          //ko.applyBindings(app);      
+          var dbx = new Dropbox.Dropbox({ clientId: "e4vn78hc3ocn6yd" });
+          var authUrl = dbx.getAuthenticationUrl('http://localhost:8000/app.html');
+          document.getElementById('authlink').href = authUrl;
+        }
+      }
     </script>
   </body>
 </html>

@@ -1,5 +1,5 @@
 function Client(settings){
-  this.dropbox = new Dropbox.Client(settings);
+  this.dropbox = new Dropbox.Dropbox(settings);
 
   var prefix = "ynab";
   this.hasLocalStorageSupport = (function(){
@@ -21,31 +21,46 @@ function Client(settings){
         deferred.resolve(cached);        
       }, 10)
     } else {
-      this.dropbox[method](path, function(error, data) {
-        if (error) {
+      this.dropbox[method]({path: path})
+        .then(function (data) {
+          if(method == "filesListFolder"){
+            console.log("unhandled method, probably..");
+            debugger;
+          }
+          //TODO: maybe split this up for the 2 dropbox methods, dont thinke ListFileFolders will like this..
+          console.log("LOAD: I'm here..." + method);
+          reader = new FileReader();
+          reader.addEventListener("loadend", function(){
+            //alert(reader.result);
+            pushCache(method, path, reader.result);
+            deferred.resolve(reader.result);
+          });
+          reader.readAsText(data.fileBlob);
+          //pushCache(method, path, reader.result);
+          //deferred.resolve(reader.result);
+        })
+        .catch(function (error) {
           deferred.reject(error);
-        }else{
-          pushCache(method, path, data);
-          deferred.resolve(data);
-        }
-      });      
+        });
     }
 
     return deferred;
   }
 
   this.loadJson = function(path){
-    return this.load(path, "readFile").then(function(data){
+    return this.load(path, "filesDownload").then(function(data){
       return JSON.parse(data);
     });
   }
 
   this.readDir = function(path){
-    return this.load(path, "readdir");
+    return this.load(path, "filesListFolder");
   }
 
+  // TODO: unused function
   this.authenticate = function(){
     var deferred = new $.Deferred;
+    /*
     this.dropbox.authenticate(function(error, client) {
       if (error) {
         deferred.reject(error);
@@ -53,6 +68,10 @@ function Client(settings){
         deferred.resolve(client);
       }
     });
+    */
+
+    //deferred.resolve();
+    deferred = true;
     return deferred;
   }
 
