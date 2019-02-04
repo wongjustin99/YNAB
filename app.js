@@ -1,7 +1,7 @@
 function App(settings){
   var self = this;
   var client = self.client = new Client(settings);
-  var rootFile = "/.ynabSettings.yroot";
+  var rootFile = ".ynabSettings.yroot";
   var appSettings = { client: client, app: self };
   self.numberFormat = '0,0.00';
   self.errorMessage = ko.observable();
@@ -45,7 +45,12 @@ function App(settings){
     if(self.budget.budgets().length === 1){
       self.budget.select(self.budget.budgets()[0])
     } else {
+      // TODO: remove hardcoded budget
       console.log("multibudget");
+      if( self.budget.budgets()[0] == "YNAB/USD~AA7FD686.ynab4" ){
+        console.log("picking hard code budget");
+        self.budget.select(self.budget.budgets()[0]);
+      }
     }
   }).fail(function(){
     console.log("error loading rootfile");
@@ -270,7 +275,8 @@ function BudgetController(settings){
     return [self.budgetDataPath(), "devices"].join("/")
   })
   self.deviceFilePath = function(deviceFileName){
-    return [self.budgetDevicesPath(), deviceFileName].join("/")
+    //return [self.budgetDevicesPath(), deviceFileName].join("/")
+    return  deviceFileName;
   }
   self.fullBudgetPath = ko.computed(function(){
     if(self.device()){
@@ -301,7 +307,10 @@ function BudgetController(settings){
         self.loading(40, "");
         client.readDir(self.budgetDevicesPath()).then(function(deviceFiles){
           self.loading(60, "Figuring out which device has the latest version ...");
+          console.log("checking devices versions");
+          debugger;
           async.eachLimit(deviceFiles, 1, function(deviceFile, callback){
+            debugger;
             if(self.device()) {
               callback()
             }else{
@@ -312,6 +321,7 @@ function BudgetController(settings){
                 }
                 callback();
               }).fail(function(){
+                console.log("loadJsonfailure");
                 callback(true);
               })
             }

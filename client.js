@@ -13,7 +13,7 @@ function Client(settings){
     }
   })();
 
-  this.load = function (path, method){
+  this.download = function (path, method){
     var deferred = new $.Deferred;
     var cached = undefined;//fetchCache(method, path);
     if(cached !== undefined) {
@@ -21,7 +21,7 @@ function Client(settings){
         deferred.resolve(cached);        
       }, 10)
     } else {
-      this.dropbox[method]({path: path})
+      this.dropbox[method]({path: '/' + path})
         .then(function (data) {
           if(method == "filesListFolder"){
             console.log("unhandled method, probably..");
@@ -47,14 +47,50 @@ function Client(settings){
     return deferred;
   }
 
+  // returns: a list of strings of paths in a directory
+  this.dirload = function (path, method){
+    var deferred = new $.Deferred;
+    var cached = undefined;//fetchCache(method, path);
+    if(cached !== undefined) {
+      setTimeout(function(){
+        deferred.resolve(cached);        
+      }, 10)
+    } else {
+      this.dropbox[method]({path: '/' + path})
+      .then(function (data) {
+        if(method !== "filesListFolder"){
+          console.log("unhandled method, probably..");
+          debugger;
+        }
+        debugger;
+        // TODO: handle more than one "page", aka keep checking with filesListFolderContinue
+
+        var pathsOnlyArr = [];
+        data.entries.forEach(function(element) {
+          // Dropbox SDK v1 and v2 have differing ideas on prefixed fwd slash
+          var path = element.path_lower.substr(1);
+          pathsOnlyArr.push(path);
+        });
+
+        pushCache(method, path, pathsOnlyArr);
+        deferred.resolve(pathsOnlyArr);
+      })
+        .catch(function (error) {
+          deferred.reject(error);
+        });
+    }
+
+    return deferred;
+  }
+
   this.loadJson = function(path){
-    return this.load(path, "filesDownload").then(function(data){
+    return this.download(path, "filesDownload").then(function(data){
       return JSON.parse(data);
     });
   }
 
   this.readDir = function(path){
-    return this.load(path, "filesListFolder");
+    return this.dirload(path, "filesListFolder");
   }
 
   // TODO: unused function
