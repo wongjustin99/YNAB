@@ -259,6 +259,9 @@ function BudgetController(settings){
   self.budget = ko.observable();
   self.budgetDataFolder = ko.observable()
   self.device = ko.observable();
+  self.devices = ko.observableArray();
+  self.deviceMostRecent = ko.observable();
+  self.deviceWithBudgetFile = ko.observable();
   self.loadingProgress = ko.observable(0);
   self.loadingMessages = ko.observableArray();
   self.errorMessage = app.errorMessage;
@@ -281,8 +284,8 @@ function BudgetController(settings){
     return  deviceFileName;
   }
   self.fullBudgetPath = ko.computed(function(){
-    if(self.device()){
-      return [self.budgetDataPath(), self.device().deviceGUID].join("/");
+    if (self.deviceWithBudgetFile()) {
+      return [self.budgetDataPath(), self.deviceWithBudgetFile().deviceGUID].join("/");
     }
   })
   self.fullBudgetSettings = ko.computed(function(){
@@ -290,6 +293,7 @@ function BudgetController(settings){
   })
   self.fullBudgetFile = ko.computed(function(){
     return [self.fullBudgetPath(), "Budget.yfull"].join("/");
+    //return "Budget.yfull";
   })
 
   self.loading = function(percent, message) {
@@ -300,6 +304,8 @@ function BudgetController(settings){
   self.select = function(budget){
     self.budget(budget);
     self.device(null);
+    self.deviceWithBudgetFile(null);
+    self.deviceMostRecent(null);
 
     self.loading(10, "Looking up where the YNAB data folder is ...");
     client.loadJson(self.budgetMetaPath()).then(function(data){
@@ -318,9 +324,36 @@ function BudgetController(settings){
             }else{
               var deviceFilePath = self.deviceFilePath(deviceFile);
               client.loadJson(deviceFilePath).then(function(device){
-                if(device.hasFullKnowledge){
-                  console.log("selecting device:" + device.deviceGUID);
-                  self.device(device);
+                self.devices.push(device);
+                if (self.devices().length === deviceFiles.length) {
+
+                  // find device that has most recent knowledge
+                  // if you most recently edited with your cell phone, this will be your cell phone
+                  // todo: refactor to remove duplication between this block and the next
+                  var deviceMostRecent = _.max(self.devices(), function(device) {
+                    var versionsKnown = device.knowledge.split(',');
+                    var versionsKnownSum = _.reduce(versionsKnown, function(sum, versionKnown) {
+                      var versionNum = parseInt(versionKnown.substr(versionKnown.indexOf('-') + 1));
+                      return sum += versionNum;
+                    }, 0);
+                    return versionsKnownSum;
+                  });
+
+                  self.deviceMostRecent(deviceMostRecent);
+
+                  // find device that has most recent knowledge that also has the full budget file
+                  // if you most recently edited with your cell phone, this will the device BEFORE your cell phone
+                  var deviceWithBudgetFile = _.max(self.devices(), function(device) {
+                    if (!device.hasFullKnowledge) return;
+                    var versionsKnown = device.knowledge.split(',');
+                    var versionsKnownSum = _.reduce(versionsKnown, function(sum, versionKnown) {
+                      var versionNum = parseInt(versionKnown.substr(versionKnown.indexOf('-') + 1));
+                      return sum += versionNum;
+                    }, 0);
+                    return versionsKnownSum;
+                  });
+
+                  self.deviceWithBudgetFile(deviceWithBudgetFile);
                 }
                 callback();
               }).fail(function(){
