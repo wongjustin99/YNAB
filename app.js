@@ -253,6 +253,8 @@ function BudgetController(settings){
   var client = settings.client;
   var app = settings.app;
 
+  self.relativeDataFolderName = 'data3-31CA3DB7';
+
   self.budgets = ko.observableArray();
   self.budget = ko.observable();
   self.budgetDataFolder = ko.observable()
@@ -302,21 +304,22 @@ function BudgetController(settings){
     self.loading(10, "Looking up where the YNAB data folder is ...");
     client.loadJson(self.budgetMetaPath()).then(function(data){
       self.loading(20, "Reading the YNAB data folder ...");
-      self.budgetDataFolder(data.relativeDataFolderName);
+      self.budgetDataFolder(self.relativeDataFolderName);
       client.readDir(self.budgetDataPath()).then(function(){
         self.loading(40, "");
         client.readDir(self.budgetDevicesPath()).then(function(deviceFiles){
           self.loading(60, "Figuring out which device has the latest version ...");
           console.log("checking devices versions");
-          debugger;
           async.eachLimit(deviceFiles, 1, function(deviceFile, callback){
-            debugger;
+            //TODO: add extra to this statement to check if last device, add a counter or something
+            // TODO: also add a comparison here to see which one has the most knowledge, and select that
             if(self.device()) {
               callback()
             }else{
               var deviceFilePath = self.deviceFilePath(deviceFile);
               client.loadJson(deviceFilePath).then(function(device){
                 if(device.hasFullKnowledge){
+                  console.log("selecting device:" + device.deviceGUID);
                   self.device(device);
                 }
                 callback();

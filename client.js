@@ -27,17 +27,12 @@ function Client(settings){
             console.log("unhandled method, probably..");
             debugger;
           }
-          //TODO: maybe split this up for the 2 dropbox methods, dont thinke ListFileFolders will like this..
-          console.log("LOAD: I'm here..." + method);
           reader = new FileReader();
           reader.addEventListener("loadend", function(){
-            //alert(reader.result);
             pushCache(method, path, reader.result);
             deferred.resolve(reader.result);
           });
           reader.readAsText(data.fileBlob);
-          //pushCache(method, path, reader.result);
-          //deferred.resolve(reader.result);
         })
         .catch(function (error) {
           deferred.reject(error);
@@ -62,7 +57,6 @@ function Client(settings){
           console.log("unhandled method, probably..");
           debugger;
         }
-        debugger;
         // TODO: handle more than one "page", aka keep checking with filesListFolderContinue
 
         var pathsOnlyArr = [];
@@ -71,6 +65,9 @@ function Client(settings){
           var path = element.path_lower.substr(1);
           pathsOnlyArr.push(path);
         });
+
+        if(data.has_more){
+        }
 
         pushCache(method, path, pathsOnlyArr);
         deferred.resolve(pathsOnlyArr);
